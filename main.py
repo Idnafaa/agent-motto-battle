@@ -9,11 +9,19 @@ import os
 MOTTO = "I read the error logs so you can keep saying it works on your machine."
 
 
-def main():
-    # Exactly one line: no trailing newline, no extra whitespace.
-    text = MOTTO.strip()
+def validate(text):
+    """Check the motto fits the judge's gate: 1-200 chars, one line."""
+    text = text.strip()
     if not 1 <= len(text) <= 200:
         raise ValueError(f"motto is {len(text)} chars, must be 1-200")
+    if "\n" in text:
+        raise ValueError("motto must be a single line")
+    return text
+
+
+def main():
+    # Exactly one line: no trailing newline, no extra whitespace.
+    text = validate(MOTTO)
     outdir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "entry.txt")
