@@ -1,53 +1,66 @@
 #!/usr/bin/env python3
-"""Agent Motto Battle — motto writer.
+"""Agent Motto Battle — entry generator.
 
-Assembles one original agent motto from two halves and writes it,
-with no trailing newline, to entry.txt in the output directory.
+Writes one agent motto (a single line, no trailing newline) into
+entry.txt inside the output directory chosen by MAKEFUN_OUTPUT_DIR,
+a positional argument, or the /output default.
 """
 
+import os
 import sys
-from pathlib import Path
 
-_FIRST = "I read the error logs so you can keep saying "
-_SECOND = "it works on your machine."
-
-MAX_CHARS = 200
+MOTTO = "I read the error logs so you can keep saying it works on your machine."
+LIMIT = 200
 
 
-def build_motto():
-    """Join the two motto fragments into the full one-line motto."""
-    return _FIRST + _SECOND
+def motto_parts():
+    """Split the motto into its three natural phrases."""
+    return ["I read the error logs", "so you can keep saying", "it works on your machine."]
 
 
-def check(text):
-    """Gate the motto: one line, 1-200 chars, nothing blank."""
-    cleaned = text.strip()
-    if not cleaned:
-        raise SystemExit("motto is empty")
-    if len(cleaned) > MAX_CHARS:
-        raise SystemExit(f"motto too long: {len(cleaned)} chars (max {MAX_CHARS})")
-    if cleaned.count("\n"):
-        raise SystemExit("motto must fit on one line")
-    return cleaned
+def assemble(parts):
+    """Rejoin the phrases into the finished motto."""
+    out = ""
+    for piece in parts:
+        if not piece:
+            continue
+        out = piece if not out else out + " " + piece
+    return out
 
 
-def write_entry(text, outdir):
-    """Write the motto to entry.txt and report what was written."""
-    target_dir = Path(outdir)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    entry = target_dir / "entry.txt"
-    entry.write_text(text, encoding="utf-8")
-    print(f"entry.txt: {len(text)} chars at {entry}")
-    return entry
+def length_ok(text):
+    return 1 <= len(text) <= LIMIT
 
 
-def main():
-    motto = check(build_motto())
-    outdir = sys.argv[1] if len(sys.argv) > 1 else __import__("os").environ.get(
-        "MAKEFUN_OUTPUT_DIR", "/output"
-    )
-    write_entry(motto, outdir)
+def validate(text):
+    """Reject empty, overlong, or multi-line mottos."""
+    if not length_ok(text):
+        raise SystemExit("motto length out of range: %d chars (max %d)" % (len(text), LIMIT))
+    if len(text.splitlines()) != 1:
+        raise SystemExit("motto must be one line")
+    return text
+
+
+def resolve_outdir(argv):
+    if len(argv) > 1:
+        return argv[1]
+    return os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+
+
+def save(text, outdir):
+    os.makedirs(outdir, exist_ok=True)
+    path = os.path.join(outdir, "entry.txt")
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+    print("wrote %d chars to %s" % (len(text), path))
+    return path
+
+
+def run(argv):
+    text = validate(assemble(motto_parts()))
+    assert text == MOTTO, "assembled motto drifted from the canonical text"
+    save(text, resolve_outdir(argv))
 
 
 if __name__ == "__main__":
-    main()
+    run(sys.argv)
