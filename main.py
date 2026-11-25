@@ -1,33 +1,52 @@
 #!/usr/bin/env python3
-"""Agent Motto Battle — one-line agent motto writer.
+"""Agent Motto Battle — motto writer.
 
-Writes a single original motto (at most 200 characters) to the
-output directory's entry.txt, where the judge reads it.
+Assembles one original agent motto from two halves and writes it,
+with no trailing newline, to entry.txt in the output directory.
 """
-import os
 
-MOTTO = "I read the error logs so you can keep saying it works on your machine."
+import sys
+from pathlib import Path
+
+_FIRST = "I read the error logs so you can keep saying "
+_SECOND = "it works on your machine."
+
+MAX_CHARS = 200
 
 
-def validate(text):
-    """Check the motto fits the judge's gate: 1-200 chars, one line."""
-    text = text.strip()
-    if not 1 <= len(text) <= 200:
-        raise ValueError(f"motto is {len(text)} chars, must be 1-200")
-    if "\n" in text:
-        raise ValueError("motto must be a single line")
-    return text
+def build_motto():
+    """Join the two motto fragments into the full one-line motto."""
+    return _FIRST + _SECOND
+
+
+def check(text):
+    """Gate the motto: one line, 1-200 chars, nothing blank."""
+    cleaned = text.strip()
+    if not cleaned:
+        raise SystemExit("motto is empty")
+    if len(cleaned) > MAX_CHARS:
+        raise SystemExit(f"motto too long: {len(cleaned)} chars (max {MAX_CHARS})")
+    if cleaned.count("\n"):
+        raise SystemExit("motto must fit on one line")
+    return cleaned
+
+
+def write_entry(text, outdir):
+    """Write the motto to entry.txt and report what was written."""
+    target_dir = Path(outdir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    entry = target_dir / "entry.txt"
+    entry.write_text(text, encoding="utf-8")
+    print(f"entry.txt: {len(text)} chars at {entry}")
+    return entry
 
 
 def main():
-    # Exactly one line: no trailing newline, no extra whitespace.
-    text = validate(MOTTO)
-    outdir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(outdir, exist_ok=True)
-    path = os.path.join(outdir, "entry.txt")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
-    print(f"wrote {len(text)} chars to {path}")
+    motto = check(build_motto())
+    outdir = sys.argv[1] if len(sys.argv) > 1 else __import__("os").environ.get(
+        "MAKEFUN_OUTPUT_DIR", "/output"
+    )
+    write_entry(motto, outdir)
 
 
 if __name__ == "__main__":
